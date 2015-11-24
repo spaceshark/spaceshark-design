@@ -1,0 +1,45 @@
+This doc defines the commands that a Space Shark can receive via the web. i.e. these are defined as 'Particle Functions' in the Space Shark firmware, so can be accessed using curl or POST messages.
+
+The general form of a curl command is
+
+curl https://api.particle.io/v1/devices/DEVICE_ID/FUNC_NAME -d access_token=ACCESS_TOKEN -d "args=FUNC_ARGS")
+
+where DEVICE_ID is the unique ID of the Photon, FUNC_NAME is the name of the function being called (see below), ACCESS_TOKEN is the (resettable) access token for the Photon, and FUNC_ARGS is a single string of arguments to pass to the function (see below).
+
+====================
+Function limitations
+====================
+
+Particle Function names (FUNC_NAME) are limited to 12 characters in length.
+
+Particle Function arguments (FUNC_ARGS) must be passed as a single string (i.e. delimited if necessary and parsed later by the Photon firmware) and this string is limited to 63 characters in length.
+
+====================
+Function definitions
+====================
+
+write_points(str)
+
+	This function accepts data points in the form of a timestamp and alt-az coordinates. In normal operation, the Shark is always looking to the next datapoint and approaching it steadily via linear interpolation.  So the idea is to load a set of future alt-az pointings linked to absolute times (in UNIX timecode) and let the Shark do the rest.  This function can load single or multiple points.
+
+	Each separate pointing is delimited by an ampersand (&).  All whitespace is ignored.  Each separate pointing is made up of three pieces of information: the UNIX timestamp, the alt angle, and the az angle.  These are separated by commas (,).  If the Shark does not receive all three pieces of information, the pointing is ignored.  The string format for a single pointing (i=integer, f=float) is
+
+	"t:i,alt:f,az:f"
+
+	although these can be in any order.  For example, if you wanted the Shark to point to zenith at a UNIX time of 1448359152, the string might be
+
+	"alt:90.0,az:0.0,t:1448359152"
+
+	Multiple data points can be written to the Shark at once, separated by ampersands, up to the maximum string length of 63 characters.  For example, if you wanted the Shark to point to zenith as before, but then track steadily and arrive at the horizon ten seconds later, a valid argument string would be
+
+	"t:1448359152,alt:90.0,az:0.0&t:1448359162,alt:0.0,az:0.0"
+
+	A third pointing would not fit within the 63 character limit.
+
+	The function returns an integer which is the number of total valid pointings it managed to interpret (i.e. 2 if the command above was successful), or -1 if there was an error.
+
+reset_points()
+
+	This function clears all pointings in the memory.  This should be done when changing target, before any new pointings are written.
+
+	Returns 0 if successful, -1 if there was an error.
